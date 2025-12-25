@@ -4,9 +4,8 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { useMarkers } from '@/components/MarkersContext';
 
 export default function AboutScreen() {
+  const [linkUrl, setLinkUrl] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
   const [proxyStatus, setProxyStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [suggestions, setSuggestions] = useState<Array<{ name: string; placeId: string }>>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -148,22 +147,33 @@ export default function AboutScreen() {
     }
   };
 
-  const handleSubmit = () => {
-    const lat = Number.parseFloat(latitude.trim());
-    const lng = Number.parseFloat(longitude.trim());
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      Alert.alert('Invalid coordinates', 'Enter valid numbers for latitude and longitude.');
+  const handleLinkSubmit = async () => {
+    const url = linkUrl.trim();
+    if (!url) {
+      Alert.alert('Missing link', 'Paste a TikTok or Instagram link.');
+      return;
+    }
+    if (!proxyBase) {
+      Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_API_BASE_URL to use the server.');
       return;
     }
 
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      Alert.alert('Out of range', 'Latitude must be between -90 and 90, longitude between -180 and 180.');
-      return;
+    try {
+      const response = await fetch(`${proxyBase.replace(/\/$/, '')}/api/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Submit failed', data?.error || 'Unable to submit the link.');
+        return;
+      }
+      Alert.alert('Link submitted', 'We received the link and will process it.');
+      setLinkUrl('');
+    } catch (error) {
+      Alert.alert('Submit failed', 'Unable to reach the server.');
     }
-
-    addMarker(lat, lng);
-    router.push({ pathname: '/tabs', params: { lat: lat.toString(), lng: lng.toString() } });
   };
 
   return (
@@ -173,6 +183,20 @@ export default function AboutScreen() {
         Proxy status: {proxyStatus === 'checking' ? 'checking…' : proxyStatus}
       </Text>
       <View style={styles.form}>
+        <Text style={styles.label}>TikTok/Instagram link</Text>
+        <TextInput
+          style={styles.input}
+          value={linkUrl}
+          onChangeText={setLinkUrl}
+          placeholder="https://www.tiktok.com/@user/video/..."
+          placeholderTextColor="#9aa0a6"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <Pressable style={styles.button} onPress={handleLinkSubmit}>
+          <Text style={styles.buttonText}>Send Link</Text>
+        </Pressable>
+        <Text style={styles.orDivider}>Or search by place name</Text>
         <Text style={styles.label}>Place name</Text>
         <TextInput
           style={styles.input}
@@ -201,28 +225,6 @@ export default function AboutScreen() {
         )}
         <Pressable style={styles.button} onPress={handlePlaceSearch}>
           <Text style={styles.buttonText}>Search Place</Text>
-        </Pressable>
-        <Text style={styles.orDivider}>Or enter coordinates</Text>
-        <Text style={styles.label}>Latitude</Text>
-        <TextInput
-          style={styles.input}
-          value={latitude}
-          onChangeText={setLatitude}
-          keyboardType="decimal-pad"
-          placeholder="43.6532"
-          placeholderTextColor="#9aa0a6"
-        />
-        <Text style={styles.label}>Longitude</Text>
-        <TextInput
-          style={styles.input}
-          value={longitude}
-          onChangeText={setLongitude}
-          keyboardType="decimal-pad"
-          placeholder="-79.3832"
-          placeholderTextColor="#9aa0a6"
-        />
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Show on Map</Text>
         </Pressable>
       </View>
     </View>

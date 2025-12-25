@@ -73,6 +73,15 @@ app.post('/api/markers', async (req, res) => {
   }
 });
 
+app.post('/api/ingest', async (req, res) => {
+  const { url } = req.body ?? {};
+  if (typeof url !== 'string' || url.trim().length === 0) {
+    res.status(400).json({ error: 'Missing url.' });
+    return;
+  }
+  res.status(202).json({ ok: true });
+});
+
 app.get('/api/places', async (req, res) => {
   const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
   const sessionToken =
