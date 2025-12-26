@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Platform, StyleSheet, View } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -16,22 +17,23 @@ export default function TabLayout() {
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabItem,
 
-        // IMPORTANT: this is what was creating the ugly big yellow block.
-        // Keep it subtle or make it transparent.
-        tabBarActiveBackgroundColor: 'rgba(255, 211, 61, 0.08)',
-        // If you want ZERO yellow pill, use this instead:
-        // tabBarActiveBackgroundColor: 'transparent',
+        // removes the ugly yellow slab completely
+        tabBarActiveBackgroundColor: 'transparent',
+
+        tabBarLabelStyle: styles.label,
 
         tabBarBackground: () => (
-          <View style={[StyleSheet.absoluteFill, styles.glass]}>
-            <View style={styles.sheen} />
-            <View style={styles.topLine} />
-            <View style={styles.bottomShade} />
+          <View style={StyleSheet.absoluteFill}>
+            <BlurView
+              intensity={Platform.OS === 'ios' ? 80 : 60}
+              tint={Platform.OS === 'ios' ? 'systemChromeMaterialDark' : 'dark'}
+              style={[StyleSheet.absoluteFill, styles.blurClip]}
+            />
+            {/* subtle border/highlight like iOS */}
+            <View pointerEvents="none" style={styles.border} />
+            <View pointerEvents="none" style={styles.topLine} />
           </View>
         ),
-
-        // Don’t force weird label/icon offsets—center them cleanly.
-        tabBarLabelStyle: styles.label,
       }}
     >
       <Tabs.Screen
@@ -71,15 +73,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 28, // raise/lower: 24–34
-
-    height: 62, // compact so labels don’t get pushed out
+    height: 62,
     borderRadius: 22,
 
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
 
-    // internal padding controls label/icon vertical centering
     paddingTop: 6,
     paddingBottom: 8,
 
@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
   },
 
   tabItem: {
-    // makes the active highlight a small pill, not a huge slab
     marginHorizontal: 10,
     borderRadius: 16,
     paddingVertical: 8,
@@ -102,22 +101,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // “Apple glass” mimic (no blur)
-  glass: {
+  blurClip: {
     borderRadius: 22,
-    backgroundColor: 'rgba(20, 20, 20, 0.28)', // lighter, more iOS-like
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
 
-  sheen: {
-    position: 'absolute',
-    top: -18,
-    left: -40,
-    right: -40,
-    height: '70%',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    transform: [{ rotate: '-8deg' }],
+  border: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
 
   topLine: {
@@ -126,15 +118,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-  },
-
-  bottomShade: {
-    position: 'absolute',
-    bottom: -10,
-    left: -20,
-    right: -20,
-    height: '60%',
-    backgroundColor: 'rgba(0, 0, 0, 0.14)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
 });
