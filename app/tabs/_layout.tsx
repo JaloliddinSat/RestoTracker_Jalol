@@ -1,9 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const extraBottom = Math.max(insets.bottom, 10);
+
   return (
     <Tabs
       screenOptions={{
@@ -14,22 +19,30 @@ export default function TabLayout() {
         headerShadowVisible: false,
         headerTintColor: '#fff',
 
-        tabBarStyle: styles.tabBar,
-        tabBarItemStyle: styles.tabItem,
-
-        // removes the ugly yellow slab completely
+        // No yellow slab highlight
         tabBarActiveBackgroundColor: 'transparent',
 
         tabBarLabelStyle: styles.label,
+        tabBarItemStyle: styles.tabItem,
+
+        // Fill the bottom gap using safe-area inset
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            bottom: 0,
+            paddingBottom: extraBottom,
+            height: 62 + extraBottom,
+          },
+        ],
 
         tabBarBackground: () => (
           <View style={StyleSheet.absoluteFill}>
             <BlurView
-              intensity={Platform.OS === 'ios' ? 80 : 60}
+              intensity={Platform.OS === 'ios' ? 85 : 60}
               tint={Platform.OS === 'ios' ? 'systemChromeMaterialDark' : 'dark'}
               style={[StyleSheet.absoluteFill, styles.blurClip]}
             />
-            {/* subtle border/highlight like iOS */}
+            {/* iOS-like edge treatment */}
             <View pointerEvents="none" style={styles.border} />
             <View pointerEvents="none" style={styles.topLine} />
           </View>
@@ -72,16 +85,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 28, // raise/lower: 24–34
-    height: 62,
-    borderRadius: 22,
 
+    borderRadius: 22,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
 
     paddingTop: 6,
-    paddingBottom: 8,
 
     shadowColor: '#000',
     shadowOpacity: 0.18,
