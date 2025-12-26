@@ -5,43 +5,34 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Accent options:
-// const ACCENT = '#34D399'; // mint
-const ACCENT = '#2DD4BF'; // teal (recommended)
-// const ACCENT = '#22D3EE'; // icy cyan
-
-const TEXT_PRIMARY = 'rgba(255,255,255,0.92)';
-const TEXT_SECONDARY = 'rgba(255,255,255,0.65)';
-const BORDER = 'rgba(255,255,255,0.16)';
-
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const extraBottom = Math.max(insets.bottom, 10);
+  const bottomPad = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: ACCENT,
-        tabBarInactiveTintColor: TEXT_SECONDARY,
+        headerShown: false,
 
-        headerStyle: { backgroundColor: '#25292e' },
-        headerShadowVisible: false,
-        headerTintColor: TEXT_PRIMARY,
+        // ICONS ONLY
+        tabBarShowLabel: false,
 
-        // removes yellow slab
-        tabBarActiveBackgroundColor: 'transparent',
+        // no accent colors
+        tabBarActiveTintColor: 'rgba(255,255,255,0.95)',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.70)',
 
-        tabBarLabelStyle: styles.label,
-        tabBarItemStyle: styles.tabItem,
+        // the selected "bubble"
+        tabBarActiveBackgroundColor: 'rgba(255,255,255,0.14)',
 
         tabBarStyle: [
           styles.tabBar,
           {
-            bottom: 0,
-            paddingBottom: extraBottom,
-            height: 62 + extraBottom,
+            paddingBottom: bottomPad,
+            height: 74 + bottomPad,
           },
         ],
+
+        tabBarItemStyle: styles.tabItem,
 
         tabBarBackground: () => (
           <View style={StyleSheet.absoluteFill}>
@@ -50,7 +41,8 @@ export default function TabLayout() {
               tint={Platform.OS === 'ios' ? 'systemChromeMaterialDark' : 'dark'}
               style={[StyleSheet.absoluteFill, styles.blurClip]}
             />
-            <View pointerEvents="none" style={styles.border} />
+            {/* subtle outer border like your reference */}
+            <View pointerEvents="none" style={styles.outerBorder} />
             <View pointerEvents="none" style={styles.topLine} />
           </View>
         ),
@@ -59,12 +51,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'home-sharp' : 'home-outline'}
+              name={focused ? 'home' : 'home-outline'}
+              size={28}
               color={color}
-              size={24}
             />
           ),
         }}
@@ -73,12 +64,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="about"
         options={{
-          title: 'Add Location',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'information-circle' : 'information-circle-outline'}
+              name={focused ? 'people' : 'people-outline'}
+              size={28}
               color={color}
-              size={24}
             />
           ),
         }}
@@ -90,42 +80,46 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    borderRadius: 22,
+    left: 14,
+    right: 14,
+    bottom: 0,
+
+    // big pill
+    borderRadius: 999,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
-    paddingTop: 6,
 
+    // feels like the screenshot (icons vertically centered)
+    paddingTop: 14,
+
+    // soft float shadow
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 14,
   },
 
+  // active "oval" behind icon
   tabItem: {
+    flex: 1,
     marginHorizontal: 10,
-    borderRadius: 16,
-    paddingVertical: 8,
-  },
-
-  label: {
-    fontSize: 12,
-    marginTop: 2,
-    color: TEXT_SECONDARY,
+    marginVertical: 10,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   blurClip: {
-    borderRadius: 22,
+    borderRadius: 999,
   },
 
-  border: {
+  outerBorder: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 22,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
 
   topLine: {
@@ -134,6 +128,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
 });
