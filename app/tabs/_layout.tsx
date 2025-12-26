@@ -2,37 +2,47 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function BubbleTabButton({
+  accessibilityState,
+  children,
+  onPress,
+}: {
+  accessibilityState?: { selected?: boolean };
+  children: React.ReactNode;
+  onPress?: () => void;
+}) {
+  const selected = !!accessibilityState?.selected;
+
+  return (
+    <Pressable onPress={onPress} style={styles.buttonWrap}>
+      <View style={[styles.bubble, selected && styles.bubbleSelected]}>
+        {children}
+      </View>
+    </Pressable>
+  );
+}
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-
-        // ICONS ONLY
         tabBarShowLabel: false,
 
-        // no accent colors
         tabBarActiveTintColor: 'rgba(255,255,255,0.95)',
         tabBarInactiveTintColor: 'rgba(255,255,255,0.70)',
-
-        // the selected "bubble"
-        tabBarActiveBackgroundColor: 'rgba(255,255,255,0.12)',
 
         tabBarStyle: [
           styles.tabBar,
           {
-            // keep the pill small but still respect home indicator
             bottom: Math.max(insets.bottom - 6, 10),
           },
         ],
-
-        tabBarItemStyle: styles.tabItem,
 
         tabBarBackground: () => (
           <View style={StyleSheet.absoluteFill}>
@@ -41,7 +51,6 @@ export default function TabLayout() {
               tint={Platform.OS === 'ios' ? 'systemChromeMaterialDark' : 'dark'}
               style={[StyleSheet.absoluteFill, styles.blurClip]}
             />
-            {/* subtle outer border like your reference */}
             <View pointerEvents="none" style={styles.outerBorder} />
             <View pointerEvents="none" style={styles.topLine} />
           </View>
@@ -51,6 +60,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          tabBarButton: (props) => <BubbleTabButton {...props} />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
@@ -64,6 +74,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="about"
         options={{
+          tabBarButton: (props) => <BubbleTabButton {...props} />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'people' : 'people-outline'}
@@ -78,42 +89,26 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  // Make the whole bar MUCH shorter (half-ish width) and centered
   tabBar: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 10, // gives the “floating pill” spacing
-
-    // SMALL pill
-    height: 64, // <- key
+    alignSelf: 'center',
+    width: '56%', // <-- smaller pill (try 50%–60%)
+    height: 62,
     borderRadius: 999,
+
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
 
-    // center icons vertically without making the bar huge
     paddingVertical: 10,
+    paddingHorizontal: 10,
 
     shadowColor: '#000',
     shadowOpacity: 0.22,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
     elevation: 14,
-  },
-
-  // This controls the selected “bubble”
-  tabItem: {
-    flex: 1,
-    marginHorizontal: 10,
-    borderRadius: 999,
-
-    // force it to be an OVAL, not a square fill
-    height: 44,
-    alignSelf: 'center',
-
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden', // IMPORTANT so active bg clips into an oval
   },
 
   blurClip: {
@@ -134,5 +129,26 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+
+  // Each tab takes half of the pill, and centers its contents
+  buttonWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // This is the actual "oval" selection bubble (never square)
+  bubble: {
+    width: 64,
+    height: 44,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+
+  bubbleSelected: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
 });
