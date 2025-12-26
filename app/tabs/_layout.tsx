@@ -22,13 +22,13 @@ export default function TabLayout() {
         tabBarInactiveTintColor: 'rgba(255,255,255,0.70)',
 
         // the selected "bubble"
-        tabBarActiveBackgroundColor: 'rgba(255,255,255,0.14)',
+        tabBarActiveBackgroundColor: 'rgba(255,255,255,0.12)',
 
         tabBarStyle: [
           styles.tabBar,
           {
-            paddingBottom: bottomPad,
-            height: 74 + bottomPad,
+            // keep the pill small but still respect home indicator
+            bottom: Math.max(insets.bottom - 6, 10),
           },
         ],
 
@@ -80,20 +80,20 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 0,
+    left: 16,
+    right: 16,
+    bottom: 10, // gives the “floating pill” spacing
 
-    // big pill
+    // SMALL pill
+    height: 64, // <- key
     borderRadius: 999,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
 
-    // feels like the screenshot (icons vertically centered)
-    paddingTop: 14,
+    // center icons vertically without making the bar huge
+    paddingVertical: 10,
 
-    // soft float shadow
     shadowColor: '#000',
     shadowOpacity: 0.22,
     shadowRadius: 22,
@@ -101,14 +101,19 @@ const styles = StyleSheet.create({
     elevation: 14,
   },
 
-  // active "oval" behind icon
+  // This controls the selected “bubble”
   tabItem: {
     flex: 1,
     marginHorizontal: 10,
-    marginVertical: 10,
     borderRadius: 999,
+
+    // force it to be an OVAL, not a square fill
+    height: 44,
+    alignSelf: 'center',
+
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden', // IMPORTANT so active bg clips into an oval
   },
 
   blurClip: {
