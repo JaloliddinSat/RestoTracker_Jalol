@@ -7,7 +7,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#ffd33d',
-        tabBarInactiveTintColor: '#d5d7db',
+        tabBarInactiveTintColor: 'rgba(213, 215, 219, 0.9)',
 
         headerStyle: { backgroundColor: '#25292e' },
         headerShadowVisible: false,
@@ -15,13 +15,13 @@ export default function TabLayout() {
 
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabItem,
-        tabBarActiveBackgroundColor: 'rgba(255, 211, 61, 0.12)',
 
-        // Optional: makes spacing feel more “iOS”
-        tabBarLabelStyle: styles.label,
-        tabBarIconStyle: styles.icon,
+        // IMPORTANT: this is what was creating the ugly big yellow block.
+        // Keep it subtle or make it transparent.
+        tabBarActiveBackgroundColor: 'rgba(255, 211, 61, 0.08)',
+        // If you want ZERO yellow pill, use this instead:
+        // tabBarActiveBackgroundColor: 'transparent',
 
-        // Apple-glass mimic background (NO expo-blur)
         tabBarBackground: () => (
           <View style={[StyleSheet.absoluteFill, styles.glass]}>
             <View style={styles.sheen} />
@@ -29,6 +29,9 @@ export default function TabLayout() {
             <View style={styles.bottomShade} />
           </View>
         ),
+
+        // Don’t force weird label/icon offsets—center them cleanly.
+        tabBarLabelStyle: styles.label,
       }}
     >
       <Tabs.Screen
@@ -65,22 +68,21 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-
-    // This is what makes it float and sit higher
     left: 16,
     right: 16,
-    bottom: 26, // <-- increase (30–34) if you want even higher
+    bottom: 28, // raise/lower: 24–34
 
-    // Less chunky than before
-    height: 64,
+    height: 62, // compact so labels don’t get pushed out
     borderRadius: 22,
 
-    // Must be transparent so the glass layer shows
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     overflow: 'hidden',
 
-    // Shadow for the floating iOS feel
+    // internal padding controls label/icon vertical centering
+    paddingTop: 6,
+    paddingBottom: 8,
+
     shadowColor: '#000',
     shadowOpacity: 0.18,
     shadowRadius: 18,
@@ -89,58 +91,50 @@ const styles = StyleSheet.create({
   },
 
   tabItem: {
-    marginHorizontal: 8,
-    marginVertical: 6,
+    // makes the active highlight a small pill, not a huge slab
+    marginHorizontal: 10,
     borderRadius: 16,
+    paddingVertical: 8,
   },
 
   label: {
     fontSize: 12,
-    marginBottom: 2,
+    marginTop: 2,
   },
 
-  icon: {
-    marginTop: 6,
-  },
-
-  // ---- Apple-glass mimic (no blur) ----
+  // “Apple glass” mimic (no blur)
   glass: {
     borderRadius: 22,
-
-    // lighter + more “material” than your current dark slab
-    backgroundColor: 'rgba(18, 18, 18, 0.38)',
+    backgroundColor: 'rgba(20, 20, 20, 0.28)', // lighter, more iOS-like
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
 
-  // angled light sheen = way less “cheap overlay”
   sheen: {
     position: 'absolute',
-    top: -12,
-    left: -20,
-    right: -20,
+    top: -18,
+    left: -40,
+    right: -40,
     height: '70%',
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    transform: [{ rotate: '-6deg' }],
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    transform: [{ rotate: '-8deg' }],
   },
 
-  // subtle top edge highlight like iOS materials
   topLine: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
 
-  // bottom shade to add depth
   bottomShade: {
     position: 'absolute',
-    bottom: -6,
-    left: -10,
-    right: -10,
-    height: '55%',
-    backgroundColor: 'rgba(0, 0, 0, 0.20)',
+    bottom: -10,
+    left: -20,
+    right: -20,
+    height: '60%',
+    backgroundColor: 'rgba(0, 0, 0, 0.14)',
   },
 });
