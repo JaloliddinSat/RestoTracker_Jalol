@@ -16,10 +16,10 @@ function PillTabBar({ state, descriptors, navigation }: any) {
   const TAB_LEFT_PX = 41;
 
   // Shift pill LOWER: smaller bottom value = closer to bottom edge
-  const TAB_BOTTOM_PX = Math.max(insets.bottom + 4, 4);
+  const TAB_BOTTOM_PX = Math.max(insets.bottom + 1, 1);
 
   // Icon sizing
-  const HOME_ICON_SIZE = 25; // slightly smaller
+  const HOME_ICON_SIZE = 22; // slightly smaller
   const COMPASS_ICON_SIZE = 28;
 
   return (
