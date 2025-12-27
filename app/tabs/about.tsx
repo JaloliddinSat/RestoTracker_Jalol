@@ -1,19 +1,69 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMarkers } from '@/components/MarkersContext';
 
+type Suggestion = { name: string; placeId: string };
+
+function formatCoords(lat: number, lng: number) {
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+function PlaceCard({
+  name,
+  subtitle,
+  onPress,
+}: {
+  name: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+      <View style={styles.cardIconWrap}>
+        <View style={styles.cardIconBubble}>
+          <Ionicons name="location" size={20} color="rgba(255,255,255,0.92)" />
+        </View>
+      </View>
+
+      <Text numberOfLines={2} style={styles.cardTitle}>
+        {name}
+      </Text>
+      <Text numberOfLines={1} style={styles.cardSubtitle}>
+        {subtitle}
+      </Text>
+
+      <View style={styles.cardAccent} />
+    </Pressable>
+  );
+}
+
 export default function AboutScreen() {
+  const insets = useSafeAreaInsets();
+
   const [linkUrl, setLinkUrl] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [proxyStatus, setProxyStatus] = useState<'checking' | 'ok' | 'error'>('checking');
-  const [suggestions, setSuggestions] = useState<Array<{ name: string; placeId: string }>>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [sessionToken, setSessionToken] = useState('');
-  const { addMarker } = useMarkers();
+
+  const { markers, addMarker } = useMarkers();
 
   const proxyBase = useMemo(() => process.env.EXPO_PUBLIC_PLACES_PROXY_URL?.trim() ?? '', []);
 
+  // health check
   useEffect(() => {
     if (!proxyBase) {
       setProxyStatus('error');
@@ -21,14 +71,11 @@ export default function AboutScreen() {
     }
     const normalized = proxyBase.replace(/\/$/, '');
     fetch(`${normalized}/api/health`)
-      .then((response) => {
-        setProxyStatus(response.ok ? 'ok' : 'error');
-      })
-      .catch(() => {
-        setProxyStatus('error');
-      });
-  }, []);
+      .then((response) => setProxyStatus(response.ok ? 'ok' : 'error'))
+      .catch(() => setProxyStatus('error'));
+  }, [proxyBase]);
 
+  // autocomplete
   useEffect(() => {
     const trimmedQuery = placeQuery.trim();
     if (!proxyBase || trimmedQuery.length < 3) {
@@ -38,111 +85,112 @@ export default function AboutScreen() {
 
     const normalized = proxyBase.replace(/\/$/, '');
     const controller = new AbortController();
+
     const timeout = setTimeout(async () => {
       setIsSuggesting(true);
       try {
         const token = sessionToken || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        if (!sessionToken) {
-          setSessionToken(token);
-        }
-        const url = `${normalized}/api/places?query=${encodeURIComponent(
-          trimmedQuery
-        )}&sessionToken=${encodeURIComponent(token)}`;
+        if (!sessionToken) setSessionToken(token);
+
+        const url = `${normalized}/api/places?query=${encodeURIComponent(trimmedQuery)}&sessionToken=${encodeURIComponent(
+          token
+        )}`;
+
         const response = await fetch(url, { signal: controller.signal });
         const data = await response.json();
+
         if (data.status !== 'OK' || !data.predictions?.length) {
           setSuggestions([]);
           return;
         }
-        const nextSuggestions = data.predictions.slice(0, 5).map((result: any) => ({
-          name: result.description,
-          placeId: result.place_id,
-        }));
-        setSuggestions(nextSuggestions);
-      } catch (error) {
+
+        setSuggestions(
+          data.predictions.slice(0, 6).map((r: any) => ({
+            name: r.description,
+            placeId: r.place_id,
+          }))
+        );
+      } catch {
         setSuggestions([]);
       } finally {
         setIsSuggesting(false);
       }
-    }, 700);
+    }, 650);
 
     return () => {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [placeQuery, proxyBase]);
+  }, [placeQuery, proxyBase, sessionToken]);
 
   const handleSuggestionPress = async (placeId: string, label: string) => {
     if (!proxyBase) {
       Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_PLACES_PROXY_URL to use the Places proxy.');
       return;
     }
+
     const normalized = proxyBase.replace(/\/$/, '');
     try {
-      const token = sessionToken;
-      const tokenParam = token ? `&sessionToken=${encodeURIComponent(token)}` : '';
+      const tokenParam = sessionToken ? `&sessionToken=${encodeURIComponent(sessionToken)}` : '';
       const url = `${normalized}/api/place-details?placeId=${encodeURIComponent(placeId)}${tokenParam}`;
       const response = await fetch(url);
       const data = await response.json();
+
       if (data.status !== 'OK' || !data.result?.geometry?.location) {
         Alert.alert('No results', data.error_message || 'No matching places found.');
         return;
       }
-      const location = data.result.geometry.location;
+
+      const loc = data.result.geometry.location;
+
       setPlaceQuery(label);
       setSuggestions([]);
       setSessionToken('');
-      addMarker(location.lat, location.lng, placeQuery.trim());
+
+      // IMPORTANT: use "label" (not stale placeQuery)
+      addMarker(loc.lat, loc.lng, label);
+
       router.push({
         pathname: '/tabs',
-        params: { lat: location.lat.toString(), lng: location.lng.toString() },
+        params: { lat: loc.lat.toString(), lng: loc.lng.toString() },
       });
-    } catch (error) {
+    } catch {
       Alert.alert('Search failed', 'Unable to reach Google Places right now.');
     }
   };
 
   const handlePlaceSearch = async () => {
-    if (!placeQuery.trim()) {
+    const q = placeQuery.trim();
+    if (!q) {
       Alert.alert('Missing place', 'Enter a place name to search.');
       return;
     }
 
+    // If we already have suggestions, take the first one.
+    if (suggestions.length > 0) {
+      handleSuggestionPress(suggestions[0].placeId, suggestions[0].name);
+      return;
+    }
+
+    if (!proxyBase) {
+      Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_PLACES_PROXY_URL to use the Places proxy.');
+      return;
+    }
+
+    // Otherwise fetch autocomplete and take first result.
+    const normalized = proxyBase.replace(/\/$/, '');
     try {
-      let url = '';
-
-      if (proxyBase) {
-        const normalized = proxyBase.replace(/\/$/, '');
-        url = `${normalized}/api/places?query=${encodeURIComponent(placeQuery.trim())}`;
-      } else {
-        if (Platform.OS === 'web') {
-          Alert.alert(
-            'Proxy required',
-            'Set EXPO_PUBLIC_PLACES_PROXY_URL so the web app can reach Google Places.'
-          );
-          return;
-        }
-        Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_PLACES_PROXY_URL to use the Places proxy.');
-        return;
-      }
-
-      const response = await fetch(url);
+      const response = await fetch(`${normalized}/api/places?query=${encodeURIComponent(q)}`);
       const data = await response.json();
-      if (data.status !== 'OK' || !data.results?.length) {
+
+      const first = data?.predictions?.[0];
+      if (data.status !== 'OK' || !first?.place_id) {
         Alert.alert('No results', data.error_message || 'No matching places found.');
         return;
       }
-      const location = data.results[0].geometry?.location;
-      if (!location) {
-        Alert.alert('No location data', 'The place does not include coordinates.');
-        return;
-      }
-      addMarker(location.lat, location.lng, label);
-      router.push({
-        pathname: '/tabs',
-        params: { lat: location.lat.toString(), lng: location.lng.toString() },
-      });
-    } catch (error) {
+
+      handleSuggestionPress(first.place_id, first.description || q);
+    } catch {
       Alert.alert('Search failed', 'Unable to reach Google Places right now.');
     }
   };
@@ -154,7 +202,7 @@ export default function AboutScreen() {
       return;
     }
     if (!proxyBase) {
-      Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_API_BASE_URL to use the server.');
+      Alert.alert('Missing proxy', 'Set EXPO_PUBLIC_PLACES_PROXY_URL to use the server.');
       return;
     }
 
@@ -171,62 +219,110 @@ export default function AboutScreen() {
       }
       Alert.alert('Link submitted', 'We received the link and will process it.');
       setLinkUrl('');
-    } catch (error) {
+    } catch {
       Alert.alert('Submit failed', 'Unable to reach the server.');
     }
   };
 
+  const sortedMarkers = [...markers].reverse(); // newest first (works even if no createdAt)
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add Location</Text>
-      <Text style={styles.status}>
-        Proxy status: {proxyStatus === 'checking' ? 'checking…' : proxyStatus}
-      </Text>
-      <View style={styles.form}>
-        <Text style={styles.label}>TikTok/Instagram link</Text>
-        <TextInput
-          style={styles.input}
-          value={linkUrl}
-          onChangeText={setLinkUrl}
-          placeholder="https://www.tiktok.com/@user/video/..."
-          placeholderTextColor="#9aa0a6"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <Pressable style={styles.button} onPress={handleLinkSubmit}>
-          <Text style={styles.buttonText}>Send Link</Text>
-        </Pressable>
-        <Text style={styles.orDivider}>Or search by place name</Text>
-        <Text style={styles.label}>Place name</Text>
-        <TextInput
-          style={styles.input}
-          value={placeQuery}
-          onChangeText={setPlaceQuery}
-          placeholder="e.g. Pizza Hut Toronto"
-          placeholderTextColor="#9aa0a6"
-          autoCapitalize="none"
-        />
-        {isSuggesting ? (
-          <Text style={styles.suggestingText}>Searching…</Text>
-        ) : (
-          suggestions.length > 0 && (
-            <View style={styles.suggestions}>
-              {suggestions.map((suggestion) => (
-                <Pressable
-                  key={suggestion.placeId}
-                  style={styles.suggestionItem}
-                  onPress={() => handleSuggestionPress(suggestion.placeId, suggestion.name)}
-                >
-                  <Text style={styles.suggestionTitle}>{suggestion.name}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )
-        )}
-        <Pressable style={styles.button} onPress={handlePlaceSearch}>
-          <Text style={styles.buttonText}>Search Place</Text>
-        </Pressable>
-      </View>
+      <FlatList
+        data={sortedMarkers}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: insets.top + 18,
+          paddingBottom: insets.bottom + 140, // keep content above the pill tab bar
+          paddingHorizontal: 18,
+        }}
+        columnWrapperStyle={styles.row}
+        renderItem={({ item }) => {
+          const title = item.name?.trim() || 'Saved place';
+          const subtitle = formatCoords(item.latitude, item.longitude);
+
+          return (
+            <PlaceCard
+              name={title}
+              subtitle={subtitle}
+              onPress={() =>
+                router.push({
+                  pathname: '/tabs',
+                  params: { lat: item.latitude.toString(), lng: item.longitude.toString() },
+                })
+              }
+            />
+          );
+        }}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Saved Locations</Text>
+            <Text style={styles.headerSubtitle}>
+              Tap a card to jump to it on the map. Proxy: {proxyStatus === 'checking' ? 'checking…' : proxyStatus}
+            </Text>
+            <View style={styles.headerDivider} />
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No saved places yet</Text>
+            <Text style={styles.emptySubtitle}>Add one below and it’ll appear here.</Text>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footer}>
+            <Text style={styles.sectionTitle}>Add Location</Text>
+
+            <Text style={styles.label}>TikTok/Instagram link</Text>
+            <TextInput
+              style={styles.input}
+              value={linkUrl}
+              onChangeText={setLinkUrl}
+              placeholder="https://www.tiktok.com/@user/video/..."
+              placeholderTextColor="#9aa0a6"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Pressable style={styles.button} onPress={handleLinkSubmit}>
+              <Text style={styles.buttonText}>Send Link</Text>
+            </Pressable>
+
+            <Text style={styles.orDivider}>Or search by place name</Text>
+
+            <Text style={styles.label}>Place name</Text>
+            <TextInput
+              style={styles.input}
+              value={placeQuery}
+              onChangeText={setPlaceQuery}
+              placeholder="e.g. Pizza Hut Toronto"
+              placeholderTextColor="#9aa0a6"
+              autoCapitalize="none"
+            />
+
+            {isSuggesting ? (
+              <Text style={styles.suggestingText}>Searching…</Text>
+            ) : suggestions.length > 0 ? (
+              <View style={styles.suggestions}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={s.placeId}
+                    style={styles.suggestionItem}
+                    onPress={() => handleSuggestionPress(s.placeId, s.name)}
+                  >
+                    <Text style={styles.suggestionTitle}>{s.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            <Pressable style={styles.button} onPress={handlePlaceSearch}>
+              <Text style={styles.buttonText}>Search Place</Text>
+            </Pressable>
+          </View>
+        }
+      />
     </View>
   );
 }
@@ -235,24 +331,107 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#25292e',
+  },
+
+  header: {
+    marginBottom: 14,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.62)',
+    marginTop: 6,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    marginTop: 14,
+  },
+
+  row: {
+    gap: 14,
+    marginBottom: 14,
+  },
+
+  card: {
+    flex: 1,
+    backgroundColor: '#2b3036',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    padding: 14,
+    minHeight: 120,
+    overflow: 'hidden',
+  },
+  cardPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.95,
+  },
+  cardIconWrap: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardIconBubble: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
   },
-  title: {
+  cardTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  cardSubtitle: {
+    color: 'rgba(255,255,255,0.60)',
+    marginTop: 6,
+    fontSize: 12,
+  },
+  cardAccent: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#ffd33d',
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 12,
+  },
+
+  empty: {
+    backgroundColor: '#1f2328',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  emptyTitle: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: 'rgba(255,255,255,0.62)',
+    marginTop: 6,
+  },
+
+  footer: {
+    marginTop: 14, // <-- pushes the add form lower (as you asked)
+    paddingTop: 10,
+  },
+  sectionTitle: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontWeight: '700',
+    marginBottom: 6,
   },
-  status: {
-    color: '#b3b8bf',
-    marginBottom: 12,
-  },
-  form: {
-    width: '100%',
-    maxWidth: 360,
-  },
+
   label: {
     color: '#fff',
     marginBottom: 6,
@@ -262,7 +441,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f2328',
     borderColor: '#3a3f45',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     color: '#fff',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -273,7 +452,7 @@ const styles = StyleSheet.create({
   },
   suggestions: {
     marginTop: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#3a3f45',
     backgroundColor: '#171a1f',
@@ -290,9 +469,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   button: {
-    marginTop: 18,
+    marginTop: 14,
     backgroundColor: '#ffd33d',
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -302,6 +481,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#1a1a1a',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
