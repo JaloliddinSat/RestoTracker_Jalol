@@ -15,8 +15,12 @@ function PillTabBar({ state, descriptors, navigation }: any) {
   // Horizontal position (smaller = more left)
   const TAB_LEFT_PX = 41;
 
-  // Vertical position
-  const TAB_BOTTOM_PX = Math.max(insets.bottom + 12, 12);
+  // Shift pill LOWER: smaller bottom value = closer to bottom edge
+  const TAB_BOTTOM_PX = Math.max(insets.bottom + 4, 4);
+
+  // Icon sizing
+  const HOME_ICON_SIZE = 25; // slightly smaller
+  const COMPASS_ICON_SIZE = 28;
 
   return (
     <View
@@ -60,23 +64,26 @@ function PillTabBar({ state, descriptors, navigation }: any) {
           navigation.emit({ type: 'tabLongPress', target: route.key });
         };
 
-        // Icon mapping: Tab 1 = Home, Tab 2 = Compass
-        const iconName =
-          route.name === 'index'
-            ? isFocused
-              ? 'home'
-              : 'home-outline'
-            : route.name === 'about'
-            ? isFocused
-              ? 'compass'
-              : 'compass-outline'
-            : isFocused
-            ? 'ellipse'
-            : 'ellipse-outline';
+        const isHome = route.name === 'index';
+        const isExplore = route.name === 'about';
+
+        const iconName = isHome
+          ? isFocused
+            ? 'home'
+            : 'home-outline'
+          : isExplore
+          ? isFocused
+            ? 'compass'
+            : 'compass-outline'
+          : isFocused
+          ? 'ellipse'
+          : 'ellipse-outline';
 
         const color = isFocused
           ? 'rgba(255,255,255,0.95)'
           : 'rgba(255,255,255,0.70)';
+
+        const size = isHome ? HOME_ICON_SIZE : COMPASS_ICON_SIZE;
 
         return (
           <Pressable
@@ -92,7 +99,7 @@ function PillTabBar({ state, descriptors, navigation }: any) {
             testID={descriptors[route.key]?.options?.tabBarTestID}
           >
             <View style={[styles.bubble, isFocused && styles.bubbleSelected]}>
-              <Ionicons name={iconName as any} size={28} color={color} />
+              <Ionicons name={iconName as any} size={size} color={color} />
             </View>
           </Pressable>
         );
