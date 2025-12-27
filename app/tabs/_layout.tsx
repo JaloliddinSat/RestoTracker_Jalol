@@ -18,7 +18,7 @@ function BubbleTabButton(props: any) {
   return (
     <Pressable
       onPress={onPress}
-      // Keep navigator-provided style so tab items size correctly
+      // keep the navigator-provided style so each tab slot is sized properly
       style={[style, styles.buttonWrap]}
       {...rest}
     >
@@ -33,11 +33,19 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  // Adjust this multiplier to make the pill shorter/longer
-  const pillWidth = Math.round(screenWidth * 0.54);
+  /**
+   * PIXEL POSITIONING (edit these)
+   * - PILL_WIDTH: exact width in pixels
+   * - PILL_BOTTOM: distance from very bottom (safe-area included)
+   */
+  const PILL_WIDTH = 320; // <-- change this (e.g. 280, 300, 340)
+  const PILL_HEIGHT = 62;
 
-  // TRUE centering for absolute-positioned elements
-  const left = Math.max(0, Math.round((screenWidth - pillWidth) / 2));
+  // exact centered left pixel
+  const leftPx = Math.round((screenWidth - PILL_WIDTH) / 2);
+
+  // exact bottom pixel (safe area included). Increase to lift it up.
+  const PILL_BOTTOM = Math.round(insets.bottom + 12);
 
   return (
     <Tabs
@@ -49,12 +57,18 @@ export default function TabLayout() {
         tabBarInactiveTintColor: 'rgba(255,255,255,0.70)',
         tabBarActiveBackgroundColor: 'transparent',
 
+        /**
+         * IMPORTANT:
+         * - DO NOT set left: 0 / right: 0.
+         * - We set a fixed width and a computed leftPx instead.
+         */
         tabBarStyle: [
           styles.tabBar,
           {
-            width: pillWidth,
-            left, // <-- THIS is the fix
-            bottom: Math.max(insets.bottom + 10, 12),
+            width: PILL_WIDTH,
+            height: PILL_HEIGHT,
+            left: leftPx,
+            bottom: PILL_BOTTOM,
           },
         ],
 
@@ -105,7 +119,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    height: 62,
+
     borderRadius: 999,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
@@ -143,12 +157,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
 
+  // tab slot alignment
   buttonWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
+  // oval selection bubble
   bubble: {
     width: 64,
     height: 44,
