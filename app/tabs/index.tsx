@@ -2,14 +2,13 @@ import { useLocalSearchParams } from 'expo-router';
 import AppMapView from '@/components/MapView';
 import { StyleSheet, Text, View } from 'react-native';
 import { useMarkers } from '@/components/MarkersContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_LATITUDE = 43.6532;
 const DEFAULT_LONGITUDE = -79.3832;
 
 function parseCoord(value: string | string[] | undefined, fallback: number) {
-  if (Array.isArray(value)) {
-    value = value[0];
-  }
+  if (Array.isArray(value)) value = value[0];
   const parsed = Number.parseFloat(value ?? '');
   return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -18,12 +17,16 @@ export default function Index() {
   const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
   const latitude = parseCoord(lat, DEFAULT_LATITUDE);
   const longitude = parseCoord(lng, DEFAULT_LONGITUDE);
+
   const { markers } = useMarkers();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
       <AppMapView latitude={latitude} longitude={longitude} markers={markers} />
-      <View style={styles.debugPanel}>
+
+      {/* stays in the same visual spot under the notch/status bar */}
+      <View style={[styles.debugPanel, { top: insets.top + 8 }]}>
         <Text style={styles.debugTitle}>Markers: {markers.length}</Text>
         {markers.slice(-3).map((marker) => (
           <Text key={marker.id} style={styles.debugItem}>
@@ -42,7 +45,7 @@ const styles = StyleSheet.create({
   },
   debugPanel: {
     position: 'absolute',
-    top: 12,
+    top: 0, // overridden by inline style using safe-area inset
     left: 12,
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 10,
