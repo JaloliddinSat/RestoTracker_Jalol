@@ -13,7 +13,7 @@ function PillTabBar({ state, descriptors, navigation }: any) {
   const PILL_HEIGHT_PX = 62;
 
   // THIS MOVES IT HORIZONTALLY (px from left edge)
-  const TAB_LEFT_PX = 240; // <-- change this. If you set 0 it goes far left. If you set 200 it shifts right.
+  const TAB_LEFT_PX = 41; // <-- change this. If you set 0 it goes far left. If you set 200 it shifts right.
 
   // THIS MOVES IT VERTICALLY (px from bottom edge)
   const TAB_BOTTOM_PX = Math.max(insets.bottom + 12, 12);
