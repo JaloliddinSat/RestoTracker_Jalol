@@ -8,29 +8,23 @@ type Props = {
   markers?: Array<{ id: string; latitude: number; longitude: number }>;
 };
 
+// MapView ALWAYS fills the screen.
+// If you want the visible map content to appear lower,
+// we shift the CAMERA UP slightly (no blank space created).
+
 export default function AppMapView({ latitude, longitude, markers = [] }: Props) {
   const { height: screenHeight } = useWindowDimensions();
 
-  /**
-   * MOVE MAP CONTENT DOWN (dp/px)
-   * Increase to push the visible map "down" (no blank space at top).
-   */
-  const CONTENT_DOWN_PX = 90;
+  // Set this to 0 to remove any top gap (map fills full view).
+  // Increase if you want the visible map content pushed DOWN (still no top gap).
+  const CONTENT_DOWN_PX = 0;
 
-  /**
-   * Convert screen pixels to a latitude shift.
-   * If we want the map content to appear DOWN by CONTENT_DOWN_PX,
-   * we move the camera center UP (north) by a proportional amount.
-   */
   const latitudeDelta = 0.05;
   const longitudeDelta = 0.05;
 
   const region: Region = useMemo(() => {
-    // fraction of screen height (e.g. 90px / 800px = 0.1125)
     const frac = screenHeight > 0 ? CONTENT_DOWN_PX / screenHeight : 0;
-
-    // move center north by that fraction of the visible latitude span
-    const latShift = latitudeDelta * frac;
+    const latShift = latitudeDelta * frac; // move camera UP to push map content DOWN
 
     return {
       latitude: latitude + latShift,
@@ -43,15 +37,15 @@ export default function AppMapView({ latitude, longitude, markers = [] }: Props)
   return (
     <View style={styles.wrapper}>
       <MapView
-        style={StyleSheet.absoluteFillObject} // stays full-screen, no top gap
+        style={StyleSheet.absoluteFillObject}
         mapType="mutedStandard"
         userInterfaceStyle="dark"
         initialRegion={region}
       >
-        {markers.map((m) => (
+        {markers.map((marker) => (
           <Marker
-            key={m.id}
-            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
           />
         ))}
       </MapView>
