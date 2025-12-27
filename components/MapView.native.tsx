@@ -1,3 +1,5 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 type Props = {
@@ -7,28 +9,41 @@ type Props = {
 };
 
 export default function AppMapView({ latitude, longitude, markers = [] }: Props) {
+  // HARD-CODED DOWNWARD MOVE (dp/px). Increase = move further down.
+  const MAP_Y_OFFSET = 90;
+
   return (
-    <MapView
-      style={{ flex: 1 }}
-      mapType="mutedStandard"
-      userInterfaceStyle="dark"
-
-      // moves the Maps attribution up so it doesn't sit at the very bottom
-      legalLabelInsets={{ top: 0, left: 12, right: 12, bottom: 80 }}
-
-      initialRegion={{
-        latitude,
-        longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}
-    >
-      {markers.map((marker) => (
-        <Marker
-          key={marker.id}
-          coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-        />
-      ))}
-    </MapView>
+    <View style={styles.wrapper}>
+      <MapView
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            top: MAP_Y_OFFSET,        // <-- moves the map DOWN
+            bottom: -MAP_Y_OFFSET,    // <-- keeps it filling the screen
+          },
+        ]}
+        mapType="mutedStandard"
+        userInterfaceStyle="dark"
+        initialRegion={{
+          latitude,
+          longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+      >
+        {markers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+          />
+        ))}
+      </MapView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
+});
